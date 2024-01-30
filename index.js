@@ -54,118 +54,107 @@ const transporter = nodemailer.createTransport({
 // routes
 
 //routes for crud operation
-app.post(
-  "https://password-reset-backend-tjdy.onrender.com/api/register",
-  async (req, res) => {
-    const { email, randomString = "", password } = req.body;
-    const user = await User.findOne({ email });
-    if (user) {
-      res.status(400).json({ message: "User already exists" });
-      return;
-    }
-    const newUser = new User({ email, randomString, password });
-    try {
-      await newUser.save();
-      res.status(200).json({ message: "User registered successfully" });
-    } catch (error) {
-      res.status(500).json({ error: "Internal server error" });
-    }
+app.post("/api/register", async (req, res) => {
+  const { email, randomString = "", password } = req.body;
+  const user = await User.findOne({ email });
+  if (user) {
+    res.status(400).json({ message: "User already exists" });
+    return;
   }
-);
-
-app.post(
-  "https://password-reset-backend-tjdy.onrender.com/api/forgot-password",
-  async (req, res) => {
-    const { email } = req.body;
-
-    // check if the user exists in the db
-    const user = await User.findOne({ email });
-    console.log(user);
-    if (!user) {
-      res.status(400).json({ message: "User Not Found" });
-      return;
-    }
-
-    // if user found , generate random string
-    const randomString = Math.random().toString(36).substring(7);
-    const resetStringTimestamp = new Date(); // set the time when random string generated
-    // store the random string in the db with the respective user and time also
-    user.randomString = randomString;
-    user.resetStringTimestamp = resetStringTimestamp;
-    await user.save();
-
-    // send mail with the random string for the particular user
-    const mailOptions = {
-      from: "ayyappan.sjec@gmail.com",
-      to: user.email,
-      subject: "Password Reset",
-      text: `Click the following link to reset your password: https://password-reset-backend-tjdy.onrender.com/api/reset-password/${randomString}`,
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Error sending mail:", error);
-        res.status(500).json({ message: "Error sending mail" });
-        return;
-      }
-      res.status(200).json({ message: "Email sent. check your inbox" });
-      return;
-    });
+  const newUser = new User({ email, randomString, password });
+  try {
+    await newUser.save();
+    res.status(200).json({ message: "User registered successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
   }
-);
+});
 
-app.get(
-  "https://password-reset-backend-tjdy.onrender.com/api/reset-password/:randomString",
-  async (req, res) => {
-    const { randomString } = req.params;
+app.post("/api/forgot-password", async (req, res) => {
+  const { email } = req.body;
 
-    // check if the random string exists in the databse
-    const user = await User.findOne({ randomString });
+  // check if the user exists in the db
+  const user = await User.findOne({ email });
+  console.log(user);
+  if (!user) {
+    res.status(400).json({ message: "User Not Found" });
+    return;
+  }
 
-    if (!user) {
-      return res.status(404).json({ message: "Invalid Link" });
+  // if user found , generate random string
+  const randomString = Math.random().toString(36).substring(7);
+  const resetStringTimestamp = new Date(); // set the time when random string generated
+  // store the random string in the db with the respective user and time also
+  user.randomString = randomString;
+  user.resetStringTimestamp = resetStringTimestamp;
+  await user.save();
+
+  // send mail with the random string for the particular user
+  const mailOptions = {
+    from: "ayyappan.sjec@gmail.com",
+    to: user.email,
+    subject: "Password Reset",
+    text: `Click the following link to reset your password: https://password-reset-backend-tjdy.onrender.com/api/reset-password/${randomString}`,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error("Error sending mail:", error);
+      res.status(500).json({ message: "Error sending mail" });
+      return;
     }
+    res.status(200).json({ message: "Email sent. check your inbox" });
+    return;
+  });
+});
 
-    const timeDifference = new Date() - user.resetStringTimestamp;
-    const timeLimit = 1 * 60 * 1000; // 2 minutes in milliseconds
+app.get("/api/reset-password/:randomString", async (req, res) => {
+  const { randomString } = req.params;
 
-    if (timeDifference > timeLimit) {
-      return res
-        .status(400)
-        .send(`<p>Time limit exceeded. Request a new link</p>`);
-    }
-    // if the randomstring matches, display the password reset form
-    res.send(`
+  // check if the random string exists in the databse
+  const user = await User.findOne({ randomString });
+
+  if (!user) {
+    return res.status(404).json({ message: "Invalid Link" });
+  }
+
+  const timeDifference = new Date() - user.resetStringTimestamp;
+  const timeLimit = 1 * 60 * 1000; // 2 minutes in milliseconds
+
+  if (timeDifference > timeLimit) {
+    return res
+      .status(400)
+      .send(`<p>Time limit exceeded. Request a new link</p>`);
+  }
+  // if the randomstring matches, display the password reset form
+  res.send(`
   <form action="https://password-reset-backend-tjdy.onrender.com/api/reset-password/${randomString}" method="post" enctype="application/x-www-form-urlencoded">
     <label for="newPassword">New Password:</label>
     <input type="password" value="" id="newPassword" name="newPassword" required>
     <button type="submit">Reset Password</button>
   </form>
 `);
+});
+
+app.post("/api/reset-password/:randomString", async (req, res) => {
+  console.log(req.body);
+  const { randomString } = req.params;
+  const { newPassword } = req.body;
+
+  // find the user by random string
+  const user = await User.findOne({ randomString });
+
+  if (!user) {
+    res.status(404).send("Invalid link");
+    return;
   }
-);
 
-app.post(
-  "https://password-reset-backend-tjdy.onrender.com/api/reset-password/:randomString",
-  async (req, res) => {
-    console.log(req.body);
-    const { randomString } = req.params;
-    const { newPassword } = req.body;
-
-    // find the user by random string
-    const user = await User.findOne({ randomString });
-
-    if (!user) {
-      res.status(404).send("Invalid link");
-      return;
-    }
-
-    // if user matches store the new password and clear the random string in the db
-    user.password = newPassword;
-    user.randomString = null;
-    try {
-      await user.save();
-      res.status(200).send(`
+  // if user matches store the new password and clear the random string in the db
+  user.password = newPassword;
+  user.randomString = null;
+  try {
+    await user.save();
+    res.status(200).send(`
   <html>
     <head>
       <meta http-equiv="refresh" content="10;url=https://fluffy-phoenix-aa1196.netlify.app">
@@ -194,11 +183,10 @@ app.post(
     </body>
   </html>
 `);
-    } catch (error) {
-      res.status(400).send(error);
-    }
+  } catch (error) {
+    res.status(400).send(error);
   }
-);
+});
 
 //server
 app.listen(PORT, () => {

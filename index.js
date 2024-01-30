@@ -22,7 +22,7 @@ app.use(express.static(path.join(__dirname, "build")));
 
 //mongodb connection
 mongoose
-  .connect(process.env.MONGODB_URI_LOCAL || process.env.MONGODB_URI)
+  .connect(process.env.MONGODB_URI)
   .then((response) => {
     console.log("db connected successfully");
   })
@@ -168,7 +168,7 @@ app.post(
       res.status(200).send(`
   <html>
     <head>
-      <meta http-equiv="refresh" content="10;url=http://localhost:5173/">
+      <meta http-equiv="refresh" content="10;url=https://fluffy-phoenix-aa1196.netlify.app">
       <script>
         var countdown = 10;
 
@@ -177,7 +177,7 @@ app.post(
           document.getElementById('countdown').innerHTML = countdown;
 
           if (countdown <= 0) {
-            window.location.href = 'http://localhost:5173/';
+            window.location.href = 'https://fluffy-phoenix-aa1196.netlify.app';
           } else {
             setTimeout(updateCountdown, 1000);
           }
@@ -190,7 +190,7 @@ app.post(
     </head>
     <body style="text-align: center; padding: 20px; background-color: #e1f0da; color: #294b29;">
       <h2>Password Reset Successful</h2>
-      <p>Your password has been reset successfully. Redirecting to <a href="http://localhost:5173/">Home</a> in <span id="countdown">10</span> seconds...</p>
+      <p>Your password has been reset successfully. Redirecting to <a href="https://fluffy-phoenix-aa1196.netlify.app">Home</a> in <span id="countdown">10</span> seconds...</p>
     </body>
   </html>
 `);
